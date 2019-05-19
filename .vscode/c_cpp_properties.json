@@ -1,0 +1,17 @@
+{
+    "configurations": [
+        {
+            "name": "esp-idf",
+            "cStandard": "c11",
+            "cppStandard": "c++17",
+            "intelliSenseMode": "gcc-x64",
+            "includePath": [
+                "/home/markw/esp/esp-idf/components/**"
+            ],
+            "defines": [],
+            "compilerPath": "/home/markw/esp/xtensa-esp32-elf/bin/xtensa-esp32-elf-gcc",
+            "compileCommands": "${workspaceFolder}/build/compile_commands.json"
+        }
+    ],
+    "version": 4
+}

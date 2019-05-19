@@ -1,0 +1,11 @@
+{
+    "files.associations": {
+        "esp_now.h": "c",
+        "freertos.h": "c",
+        "button.h": "c",
+        "esp_hidd_prf_api.h": "c",
+        "hid_dev.h": "c",
+        "event_groups.h": "c",
+        "hidd_le_prf_int.h": "c"
+    }
+}
