@@ -1,10 +1,18 @@
 # esp32-hid-joystick
 
-This is a very basic HID joystick I put together using a [WEMOS D32PRO](https://wiki.wemos.cc/products:d32:d32_pro) and an [Adafruit joystick](https://www.adafruit.com/product/512).
+This is a Bluetooth Low Energy (BLE) HID joystick I put together using a [WEMOS D32PRO](https://wiki.wemos.cc/products:d32:d32_pro) and an [Adafruit joystick](https://www.adafruit.com/product/512).
 
 # Building
 
 This project uses [esp-idf](https://github.com/espressif/esp-idf) and requires a recent version with support for [CMake](https://cmake.org/).
+
+# Usage
+
+The below image shows this joystick detected by chrome after being paired.
+
+![Gamepad Detected In Chrome](docs/images/gamepad-detected.png)
+
+Handy gamepad tester used is located at http://luser.github.io/gamepadtest/
 
 # Assembly
 
