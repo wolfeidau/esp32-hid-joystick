@@ -3,9 +3,8 @@
 # project subdirectory.
 #
 
-PROJECT_NAME := hidd_demos
+PROJECT_NAME := hid_joystick
 
-COMPONENT_ADD_INCLUDEDIRS := components/include	\
-								
+COMPONENT_ADD_INCLUDEDIRS := components/include
 
 include $(IDF_PATH)/make/project.mk

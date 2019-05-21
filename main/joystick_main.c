@@ -1,10 +1,3 @@
-/*
-This example code is in the Public Domain (or CC0 licensed, at your option.)
-Unless required by applicable law or agreed to in writing, this software is 
-distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR  
-CONDITIONS OF ANY KIND, either express or implied.
-*/
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -31,18 +24,7 @@ CONDITIONS OF ANY KIND, either express or implied.
 #include "button.h"
 #include "driver/adc.h"
 
-/** 
- * Note:
- * 1. Win10 does not support vendor report , So SUPPORT_REPORT_VENDOR is always set to FALSE, it defines in hidd_le_prf_int.h
- * 2. Update connection parameters are not allowed during iPhone HID encryption, slave turns 
- * off the ability to automatically update connection parameters during encryption.
- * 3. After our HID device is connected, the iPhones write 1 to the Report Characteristic Configuration Descriptor, 
- * even if the HID encryption is not completed. This should actually be written 1 after the HID encryption is completed.
- * we modify the permissions of the Report Characteristic Configuration Descriptor to `ESP_GATT_PERM_READ | ESP_GATT_PERM_WRITE_ENCRYPTED`.
- * if you got `GATT_INSUF_ENCRYPTION` error, please ignore.
- */
-
-#define HID_DEMO_TAG "HID_DEMO"
+#define HID_JOYSTICK_TAG "HID_JOYSTICK"
 
 static uint16_t hid_conn_id = 0;
 static bool sec_conn = false;
@@ -107,7 +89,7 @@ static void hidd_event_callback(esp_hidd_cb_event_t event, esp_hidd_cb_param_t *
         case ESP_HIDD_EVENT_DEINIT_FINISH:
             break;
 		case ESP_HIDD_EVENT_BLE_CONNECT: {
-            ESP_LOGI(HID_DEMO_TAG, "ESP_HIDD_EVENT_BLE_CONNECT");
+            ESP_LOGI(HID_JOYSTICK_TAG, "ESP_HIDD_EVENT_BLE_CONNECT");
             connected = true;
             hid_conn_id = param->connect.conn_id;
             break;
@@ -115,13 +97,13 @@ static void hidd_event_callback(esp_hidd_cb_event_t event, esp_hidd_cb_param_t *
         case ESP_HIDD_EVENT_BLE_DISCONNECT: {
             sec_conn = false;
             connected = false;
-            ESP_LOGI(HID_DEMO_TAG, "ESP_HIDD_EVENT_BLE_DISCONNECT");
+            ESP_LOGI(HID_JOYSTICK_TAG, "ESP_HIDD_EVENT_BLE_DISCONNECT");
             esp_ble_gap_start_advertising(&hidd_adv_params);
             break;
         }
         case ESP_HIDD_EVENT_BLE_VENDOR_REPORT_WRITE_EVT: {
-            ESP_LOGI(HID_DEMO_TAG, "%s, ESP_HIDD_EVENT_BLE_VENDOR_REPORT_WRITE_EVT", __func__);
-            ESP_LOG_BUFFER_HEX(HID_DEMO_TAG, param->vendor_write.data, param->vendor_write.length);
+            ESP_LOGI(HID_JOYSTICK_TAG, "%s, ESP_HIDD_EVENT_BLE_VENDOR_REPORT_WRITE_EVT", __func__);
+            ESP_LOG_BUFFER_HEX(HID_JOYSTICK_TAG, param->vendor_write.data, param->vendor_write.length);
         }    
         default:
             break;
@@ -137,7 +119,7 @@ static void gap_event_handler(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param
         break;
     case ESP_GAP_BLE_SEC_REQ_EVT:
         for(int i = 0; i < ESP_BD_ADDR_LEN; i++) {
-            ESP_LOGD(HID_DEMO_TAG, "%x:",param->ble_security.ble_req.bd_addr[i]);
+            ESP_LOGD(HID_JOYSTICK_TAG, "%x:",param->ble_security.ble_req.bd_addr[i]);
         }
         esp_ble_gap_security_rsp(param->ble_security.ble_req.bd_addr, true);
 	break;
@@ -145,13 +127,13 @@ static void gap_event_handler(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param
         sec_conn = true;
         esp_bd_addr_t bd_addr;
         memcpy(bd_addr, param->ble_security.auth_cmpl.bd_addr, sizeof(esp_bd_addr_t));
-        ESP_LOGI(HID_DEMO_TAG, "remote BD_ADDR: %08x%04x",\
+        ESP_LOGI(HID_JOYSTICK_TAG, "remote BD_ADDR: %08x%04x",\
                 (bd_addr[0] << 24) + (bd_addr[1] << 16) + (bd_addr[2] << 8) + bd_addr[3],
                 (bd_addr[4] << 8) + bd_addr[5]);
-        ESP_LOGI(HID_DEMO_TAG, "address type = %d", param->ble_security.auth_cmpl.addr_type);
-        ESP_LOGI(HID_DEMO_TAG, "pair status = %s",param->ble_security.auth_cmpl.success ? "success" : "fail");
+        ESP_LOGI(HID_JOYSTICK_TAG, "address type = %d", param->ble_security.auth_cmpl.addr_type);
+        ESP_LOGI(HID_JOYSTICK_TAG, "pair status = %s",param->ble_security.auth_cmpl.success ? "success" : "fail");
         if(!param->ble_security.auth_cmpl.success) {
-            ESP_LOGE(HID_DEMO_TAG, "fail reason = 0x%x",param->ble_security.auth_cmpl.fail_reason);
+            ESP_LOGE(HID_JOYSTICK_TAG, "fail reason = 0x%x",param->ble_security.auth_cmpl.fail_reason);
         }
         break;
     default:
@@ -169,11 +151,11 @@ static void joystick_button_task(void *pvParameter)
     while (true) {
         if (xQueueReceive(button_events, &ev, 1000/portTICK_PERIOD_MS)) {
             if ((ev.pin == BUTTON_1) && (ev.event == BUTTON_DOWN)) {
-                ESP_LOGD(HID_DEMO_TAG, "button down");
+                ESP_LOGD(HID_JOYSTICK_TAG, "button down");
                 buttons = 1;
             }
             if ((ev.pin == BUTTON_1) && (ev.event == BUTTON_UP)) {
-                ESP_LOGD(HID_DEMO_TAG, "button up");
+                ESP_LOGD(HID_JOYSTICK_TAG, "button up");
                 buttons = 0;
             }
         }
@@ -211,11 +193,11 @@ static void read_joystick_task(void *pvParameter)
         // very simple checksum :)
         current_sum = (buttons<<16) + (x<<8) + y;
 
-        ESP_LOGD(HID_DEMO_TAG, "last_sum %d", last_sum);
+        ESP_LOGD(HID_JOYSTICK_TAG, "last_sum %d", last_sum);
 
         // only transmit if something changed
         if (current_sum != last_sum) {
-            ESP_LOGD(HID_DEMO_TAG, "send buttons %d X %d Y %d", buttons, x, y);
+            ESP_LOGD(HID_JOYSTICK_TAG, "send buttons %d X %d Y %d", buttons, x, y);
             esp_hidd_send_joystick_value(hid_conn_id, buttons, x, y);
         }
 
@@ -250,30 +232,30 @@ void app_main()
     esp_bt_controller_config_t bt_cfg = BT_CONTROLLER_INIT_CONFIG_DEFAULT();
     ret = esp_bt_controller_init(&bt_cfg);
     if (ret) {
-        ESP_LOGE(HID_DEMO_TAG, "%s initialize controller failed\n", __func__);
+        ESP_LOGE(HID_JOYSTICK_TAG, "%s initialize controller failed\n", __func__);
         return;
     }
 
     ret = esp_bt_controller_enable(ESP_BT_MODE_BLE);
     if (ret) {
-        ESP_LOGE(HID_DEMO_TAG, "%s enable controller failed\n", __func__);
+        ESP_LOGE(HID_JOYSTICK_TAG, "%s enable controller failed\n", __func__);
         return;
     }
 
     ret = esp_bluedroid_init();
     if (ret) {
-        ESP_LOGE(HID_DEMO_TAG, "%s init bluedroid failed\n", __func__);
+        ESP_LOGE(HID_JOYSTICK_TAG, "%s init bluedroid failed\n", __func__);
         return;
     }
 
     ret = esp_bluedroid_enable();
     if (ret) {
-        ESP_LOGE(HID_DEMO_TAG, "%s init bluedroid failed\n", __func__);
+        ESP_LOGE(HID_JOYSTICK_TAG, "%s init bluedroid failed\n", __func__);
         return;
     }
 
     if((ret = esp_hidd_profile_init()) != ESP_OK) {
-        ESP_LOGE(HID_DEMO_TAG, "%s init bluedroid failed\n", __func__);
+        ESP_LOGE(HID_JOYSTICK_TAG, "%s init bluedroid failed\n", __func__);
     }
 
     ///register the callback function to the gap module
@@ -297,11 +279,11 @@ void app_main()
     esp_ble_gap_set_security_param(ESP_BLE_SM_SET_RSP_KEY, &rsp_key, sizeof(uint8_t));
 
     if((ret = joystick_button_init()) != ESP_OK) {
-        ESP_LOGE(HID_DEMO_TAG, "%s init joystick button failed\n", __func__);
+        ESP_LOGE(HID_JOYSTICK_TAG, "%s init joystick button failed\n", __func__);
     }
     
     if((ret = read_joystick_init()) != ESP_OK) {
-        ESP_LOGE(HID_DEMO_TAG, "%s init read joystick failed\n", __func__);
+        ESP_LOGE(HID_JOYSTICK_TAG, "%s init read joystick failed\n", __func__);
     }
 }
 
