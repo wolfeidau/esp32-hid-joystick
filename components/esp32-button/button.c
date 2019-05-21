@@ -73,7 +73,7 @@ static void button_task(void *pvParameter)
             update_button(&debounce[idx]);
             if (debounce[idx].down_time && (millis() - debounce[idx].down_time > LONG_PRESS_DURATION)) {
                 debounce[idx].down_time = 0;
-                ESP_LOGI(TAG, "%d LONG", debounce[idx].pin);
+                ESP_LOGD(TAG, "%d LONG", debounce[idx].pin);
                 int i=0;
                 while (!button_up(&debounce[idx])) {
                     if (!i) send_event(debounce[idx], BUTTON_DOWN);
@@ -82,15 +82,15 @@ static void button_task(void *pvParameter)
                     vTaskDelay(10/portTICK_PERIOD_MS);
                     update_button(&debounce[idx]);
                 }
-                ESP_LOGI(TAG, "%d UP", debounce[idx].pin);
+                ESP_LOGD(TAG, "%d UP", debounce[idx].pin);
                 send_event(debounce[idx], BUTTON_UP);
             } else if (button_down(&debounce[idx])) {
                 debounce[idx].down_time = millis();
-                ESP_LOGI(TAG, "%d DOWN", debounce[idx].pin);
+                ESP_LOGD(TAG, "%d DOWN", debounce[idx].pin);
                 send_event(debounce[idx], BUTTON_DOWN);
             } else if (button_up(&debounce[idx])) {
                 debounce[idx].down_time = 0;
-                ESP_LOGI(TAG, "%d UP", debounce[idx].pin);
+                ESP_LOGD(TAG, "%d UP", debounce[idx].pin);
                 send_event(debounce[idx], BUTTON_UP);
             }
         }

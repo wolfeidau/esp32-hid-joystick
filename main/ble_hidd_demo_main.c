@@ -50,6 +50,7 @@ static bool send_volume_up = false;
 
 static bool connected = false;
 static uint8_t buttons = 0;
+static uint32_t last_sum = 0;
 
 #define CHAR_DECLARATION_SIZE   (sizeof(uint8_t))
 
@@ -168,11 +169,11 @@ static void joystick_button_task(void *pvParameter)
     while (true) {
         if (xQueueReceive(button_events, &ev, 1000/portTICK_PERIOD_MS)) {
             if ((ev.pin == BUTTON_1) && (ev.event == BUTTON_DOWN)) {
-                ESP_LOGI(HID_DEMO_TAG, "button down");
+                ESP_LOGD(HID_DEMO_TAG, "button down");
                 buttons = 1;
             }
             if ((ev.pin == BUTTON_1) && (ev.event == BUTTON_UP)) {
-                ESP_LOGI(HID_DEMO_TAG, "button up");
+                ESP_LOGD(HID_DEMO_TAG, "button up");
                 buttons = 0;
             }
         }
@@ -196,15 +197,29 @@ uint8_t readJoystickChannel(adc1_channel_t channel)
 
 static void read_joystick_task(void *pvParameter)
 {
+    uint8_t x,y;
+    uint32_t current_sum;
+
     while(1) {
 
-        vTaskDelay(1000 / portTICK_PERIOD_MS);
+        // currently configured for updates being published at 20hz
+        vTaskDelay(50 / portTICK_PERIOD_MS);
 
-        ESP_LOGI(HID_DEMO_TAG, "read buttons %d X %d Y %d", buttons, readJoystickChannel(ADC1_CHANNEL_6), readJoystickChannel(ADC1_CHANNEL_4));
+        x = readJoystickChannel(ADC1_CHANNEL_6);
+        y = readJoystickChannel(ADC1_CHANNEL_4);
 
-        esp_hidd_send_joystick_value(hid_conn_id, buttons, readJoystickChannel(ADC1_CHANNEL_6), readJoystickChannel(ADC1_CHANNEL_4));
+        // very simple checksum :)
+        current_sum = (buttons<<16) + (x<<8) + y;
 
-        vTaskDelay(1000 / portTICK_PERIOD_MS);
+        ESP_LOGD(HID_DEMO_TAG, "last_sum %d", last_sum);
+
+        // only transmit if something changed
+        if (current_sum != last_sum) {
+            ESP_LOGD(HID_DEMO_TAG, "send buttons %d X %d Y %d", buttons, x, y);
+            esp_hidd_send_joystick_value(hid_conn_id, buttons, x, y);
+        }
+
+        last_sum = current_sum;
 
     }
 
