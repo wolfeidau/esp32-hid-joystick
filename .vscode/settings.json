@@ -6,6 +6,11 @@
         "esp_hidd_prf_api.h": "c",
         "hid_dev.h": "c",
         "event_groups.h": "c",
-        "hidd_le_prf_int.h": "c"
+        "hidd_le_prf_int.h": "c",
+        "esp_bt_defs.h": "c",
+        "esp_gatt_defs.h": "c",
+        "gatt_api.h": "c",
+        "esp_bt.h": "c",
+        "adc.h": "c"
     }
 }

@@ -159,6 +159,8 @@ void esp_hidd_send_keyboard_value(uint16_t conn_id, key_mask_t special_key_mask,
 
 void esp_hidd_send_mouse_value(uint16_t conn_id, uint8_t mouse_button, int8_t mickeys_x, int8_t mickeys_y);
 
+void esp_hidd_send_joystick_value(uint16_t conn_id, uint8_t joystick_button, int8_t joystick_x, int8_t joystick_y);
+
 #ifdef __cplusplus
 }
 #endif

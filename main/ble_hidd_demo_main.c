@@ -29,6 +29,7 @@ CONDITIONS OF ANY KIND, either express or implied.
 #include "hid_dev.h"
 
 #include "button.h"
+#include "driver/adc.h"
 
 /** 
  * Note:
@@ -46,11 +47,15 @@ CONDITIONS OF ANY KIND, either express or implied.
 static uint16_t hid_conn_id = 0;
 static bool sec_conn = false;
 static bool send_volume_up = false;
+
+static bool connected = false;
+static uint8_t buttons = 0;
+
 #define CHAR_DECLARATION_SIZE   (sizeof(uint8_t))
 
 static void hidd_event_callback(esp_hidd_cb_event_t event, esp_hidd_cb_param_t *param);
 
-#define HIDD_DEVICE_NAME            "HID"
+#define HIDD_DEVICE_NAME            "HID Wolfe"
 static uint8_t hidd_service_uuid128[] = {
     /* LSB <--------------------------------------------------------------------------------> MSB */
     //first uuid, 16bit, [12],[13] is the value
@@ -102,11 +107,13 @@ static void hidd_event_callback(esp_hidd_cb_event_t event, esp_hidd_cb_param_t *
             break;
 		case ESP_HIDD_EVENT_BLE_CONNECT: {
             ESP_LOGI(HID_DEMO_TAG, "ESP_HIDD_EVENT_BLE_CONNECT");
+            connected = true;
             hid_conn_id = param->connect.conn_id;
             break;
         }
         case ESP_HIDD_EVENT_BLE_DISCONNECT: {
             sec_conn = false;
+            connected = false;
             ESP_LOGI(HID_DEMO_TAG, "ESP_HIDD_EVENT_BLE_DISCONNECT");
             esp_ble_gap_start_advertising(&hidd_adv_params);
             break;
@@ -151,28 +158,6 @@ static void gap_event_handler(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param
     }
 }
 
-void hid_demo_task(void *pvParameters)
-{
-    vTaskDelay(1000 / portTICK_PERIOD_MS);
-    while(1) {
-        vTaskDelay(2000 / portTICK_PERIOD_MS);
-        if (sec_conn) {
-            ESP_LOGI(HID_DEMO_TAG, "Send the volume");
-            send_volume_up = true;
-
-            esp_hidd_send_consumer_value(hid_conn_id, HID_CONSUMER_VOLUME_UP, true);
-            vTaskDelay(3000 / portTICK_PERIOD_MS);
-            if (send_volume_up) {
-                send_volume_up = false;
-                esp_hidd_send_consumer_value(hid_conn_id, HID_CONSUMER_VOLUME_UP, false);
-                esp_hidd_send_consumer_value(hid_conn_id, HID_CONSUMER_VOLUME_DOWN, true);
-                vTaskDelay(3000 / portTICK_PERIOD_MS);
-                esp_hidd_send_consumer_value(hid_conn_id, HID_CONSUMER_VOLUME_DOWN, false);
-            }
-        }
-    }
-}
-
 #define BUTTON_1 4
 
 static void joystick_button_task(void *pvParameter)
@@ -183,7 +168,12 @@ static void joystick_button_task(void *pvParameter)
     while (true) {
         if (xQueueReceive(button_events, &ev, 1000/portTICK_PERIOD_MS)) {
             if ((ev.pin == BUTTON_1) && (ev.event == BUTTON_DOWN)) {
-                ESP_LOGI(TAG, "button pushed");
+                ESP_LOGI(HID_DEMO_TAG, "button down");
+                buttons = 1;
+            }
+            if ((ev.pin == BUTTON_1) && (ev.event == BUTTON_UP)) {
+                ESP_LOGI(HID_DEMO_TAG, "button up");
+                buttons = 0;
             }
         }
     }
@@ -193,6 +183,37 @@ static esp_err_t joystick_button_init(void)
 {
 
     xTaskCreate(joystick_button_task, "button_task", 2048, NULL, 4, NULL);
+
+    return ESP_OK;
+}
+
+uint8_t readJoystickChannel(adc1_channel_t channel)
+{
+  adc1_config_width(ADC_WIDTH_BIT_10);   //Range 0-1023 
+  adc1_config_channel_atten(channel, ADC_ATTEN_DB_11);  //ADC_ATTEN_DB_11 = 0-3,6V
+  return (uint8_t)(adc1_get_raw(channel) >> 2); //Read analog
+}
+
+static void read_joystick_task(void *pvParameter)
+{
+    while(1) {
+
+        vTaskDelay(1000 / portTICK_PERIOD_MS);
+
+        ESP_LOGI(HID_DEMO_TAG, "read buttons %d X %d Y %d", buttons, readJoystickChannel(ADC1_CHANNEL_6), readJoystickChannel(ADC1_CHANNEL_4));
+
+        esp_hidd_send_joystick_value(hid_conn_id, buttons, readJoystickChannel(ADC1_CHANNEL_6), readJoystickChannel(ADC1_CHANNEL_4));
+
+        vTaskDelay(1000 / portTICK_PERIOD_MS);
+
+    }
+
+}
+
+static esp_err_t read_joystick_init(void) 
+{
+
+    xTaskCreate(read_joystick_task, "read_joystick_task", 2048, NULL, 4, NULL);
 
     return ESP_OK;
 }
@@ -260,7 +281,12 @@ void app_main()
     esp_ble_gap_set_security_param(ESP_BLE_SM_SET_INIT_KEY, &init_key, sizeof(uint8_t));
     esp_ble_gap_set_security_param(ESP_BLE_SM_SET_RSP_KEY, &rsp_key, sizeof(uint8_t));
 
-    xTaskCreate(&hid_demo_task, "hid_task", 2048, NULL, 5, NULL);
-
+    if((ret = joystick_button_init()) != ESP_OK) {
+        ESP_LOGE(HID_DEMO_TAG, "%s init joystick button failed\n", __func__);
+    }
+    
+    if((ret = read_joystick_init()) != ESP_OK) {
+        ESP_LOGE(HID_DEMO_TAG, "%s init read joystick failed\n", __func__);
+    }
 }
 

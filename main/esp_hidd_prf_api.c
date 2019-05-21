@@ -141,5 +141,20 @@ void esp_hidd_send_mouse_value(uint16_t conn_id, uint8_t mouse_button, int8_t mi
     return;
 }
 
+void esp_hidd_send_joystick_value(uint16_t conn_id, uint8_t joystick_button, int8_t joystick_x, int8_t joystick_y)
+{
+    uint8_t buffer[3];
+    
+    buffer[0] = joystick_button;   // Buttons
+    buffer[1] = joystick_x;           // X
+    buffer[2] = joystick_y;           // Y
+
+    ESP_LOGI(HID_LE_PRF_TAG, "the joystick value = %d,%d,%d", buffer[0], buffer[1], buffer[2]);
+
+    hid_dev_send_report(hidd_le_env.gatt_if, conn_id,
+                        HID_RPT_ID_MOUSE_IN, HID_REPORT_TYPE_INPUT, 3, buffer);
+    return;
+}
+
 
 
