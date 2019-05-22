@@ -12,5 +12,5 @@
         "gatt_api.h": "c",
         "esp_bt.h": "c",
         "adc.h": "c"
-    }
+    },
 }
