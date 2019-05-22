@@ -42,7 +42,6 @@
 
 static uint16_t hid_conn_id = 0;
 static bool sec_conn = false;
-static bool send_volume_up = false;
 
 static bool connected = false;
 static uint8_t buttons = 0;
@@ -214,7 +213,7 @@ static esp_err_t joystick_button_init(void)
     return ESP_OK;
 }
 
-uint8_t readJoystickChannel(adc1_channel_t channel)
+static uint8_t readJoystickChannel(adc1_channel_t channel)
 {
   adc1_config_width(ADC_WIDTH_BIT_10);   //Range 0-1023 
   adc1_config_channel_atten(channel, ADC_ATTEN_DB_11);  //ADC_ATTEN_DB_11 = 0-3,6V
