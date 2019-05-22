@@ -176,6 +176,36 @@ static void joystick_button_task(void *pvParameter)
     }
 }
 
+#define BLINK_GPIO 5
+
+static void blink_led_task(void *pvParameter)
+{
+    while(1) {
+
+        if (connected) {
+            /* Blink off (output low) */
+            gpio_set_level(BLINK_GPIO, 0);
+            vTaskDelay(1000 / portTICK_PERIOD_MS);
+
+        }
+        /* Blink on (output high) */
+        gpio_set_level(BLINK_GPIO, 1);
+        vTaskDelay(1000 / portTICK_PERIOD_MS);
+    }
+
+}
+
+static esp_err_t blink_led_init(void) 
+{
+    gpio_pad_select_gpio(BLINK_GPIO);
+    /* Set the GPIO as a push/pull output */
+    gpio_set_direction(BLINK_GPIO, GPIO_MODE_OUTPUT);
+
+    xTaskCreate(blink_led_task, "blink_led_task", 2048, NULL, 4, NULL);
+
+    return ESP_OK;
+}
+
 static esp_err_t joystick_button_init(void) 
 {
 
@@ -298,6 +328,9 @@ void app_main()
     
     if((ret = read_joystick_init()) != ESP_OK) {
         ESP_LOGE(HID_JOYSTICK_TAG, "%s init read joystick failed\n", __func__);
+    }
+    if((ret = blink_led_init()) != ESP_OK) {
+        ESP_LOGE(HID_JOYSTICK_TAG, "%s init blink failed\n", __func__);
     }
 }
 
