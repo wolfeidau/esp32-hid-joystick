@@ -215,9 +215,9 @@ static esp_err_t joystick_button_init(void)
 
 static uint8_t readJoystickChannel(adc1_channel_t channel)
 {
-  adc1_config_width(ADC_WIDTH_BIT_10);   //Range 0-1023 
-  adc1_config_channel_atten(channel, ADC_ATTEN_DB_11);  //ADC_ATTEN_DB_11 = 0-3,6V
-  return (uint8_t)(adc1_get_raw(channel) >> 2); //Read analog
+    adc1_config_width(ADC_WIDTH_BIT_10);                  //Range 0-1023
+    adc1_config_channel_atten(channel, ADC_ATTEN_DB_11);  //ADC_ATTEN_DB_11 = 0-3,6V
+    return (uint8_t)(adc1_get_raw(channel) >> 2);         //Read analog and shift to 0-255
 }
 
 static void read_joystick_task(void *pvParameter)

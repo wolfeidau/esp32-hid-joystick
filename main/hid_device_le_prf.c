@@ -38,7 +38,7 @@ static hid_report_map_t hid_rpt_map[HID_NUM_REPORTS];
 // Keyboard report descriptor (using format for Boot interface descriptor)
 static const uint8_t hidReportMap[] = {
     0x05, 0x01,  // Usage Page (Generic Desktop)
-    0x09, 0x04,  // Usage (Joystick)
+    0x09, 0x05,  // Usage (Gamepad)
     0xA1, 0x01,  // Collection (Application)
     0x85, 0x01,  // Report Id (1)
     0xA1, 0x00,  //   Collection (Physical)
@@ -58,8 +58,8 @@ static const uint8_t hidReportMap[] = {
     0x05, 0x01,  //     Usage Page (Generic Desktop)
     0x09, 0x30,  //     Usage (X)
     0x09, 0x31,  //     Usage (Y)
-    0x15, 0x00,  //     Logical Minimum (0)
-    0x25, 0xFF,  //     Logical Maximum (255)    
+    0x15, 0x81,  //     Logical Minimum (-127)
+    0x25, 0x7F,  //     Logical Maximum (127)
     0x95, 0x02,  //     Report Count (2)
     0x75, 0x08,  //     Report Size (8)
     0x81, 0x02,  //     Input (Data, Variable, Absolute) - X & Y coordinate
