@@ -46,6 +46,7 @@ static bool sec_conn = false;
 static bool connected = false;
 static uint8_t buttons = 0;
 static uint32_t last_sum = 0;
+static uint8_t last_buttons = 0;
 
 #define CHAR_DECLARATION_SIZE   (sizeof(uint8_t))
 
@@ -155,22 +156,51 @@ static void gap_event_handler(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param
 }
 
 #define BUTTON_1 4
+#define BUTTON_2 12
+#define BUTTON_3 18
+#define BUTTON_4 19
+
+const uint8_t button_1_bit = 1 << 0;
+const uint8_t button_2_bit = 1 << 1;
+const uint8_t button_3_bit = 1 << 2;
+const uint8_t button_4_bit = 1 << 3;
+
+static uint8_t shift_button_value(uint8_t event, uint8_t cbuttons, uint8_t val) {
+    if (event == BUTTON_UP) {
+        cbuttons &= ~(val);
+    }
+    if (event == BUTTON_DOWN) {
+        cbuttons |= (val);
+    }
+
+    return cbuttons;
+}
 
 static void joystick_button_task(void *pvParameter)
 {
     button_event_t ev;
-    QueueHandle_t button_events = button_init(PIN_BIT(BUTTON_1));
+    QueueHandle_t button_events = button_init(PIN_BIT(BUTTON_1) | PIN_BIT(BUTTON_2) | PIN_BIT(BUTTON_3) | PIN_BIT(BUTTON_4));
+    uint8_t val = 0;
 
     while (true) {
         if (xQueueReceive(button_events, &ev, 1000/portTICK_PERIOD_MS)) {
-            if ((ev.pin == BUTTON_1) && (ev.event == BUTTON_DOWN)) {
-                ESP_LOGD(HID_JOYSTICK_TAG, "button down");
-                buttons = 1;
+            ESP_LOGI(HID_JOYSTICK_TAG, "button pin: %d event: %d", ev.pin, ev.event);
+
+            switch(ev.pin) {
+                case BUTTON_1:
+                    buttons = shift_button_value(ev.event, buttons, button_1_bit);
+                    break;
+                case BUTTON_2:
+                    buttons = shift_button_value(ev.event, buttons, button_2_bit);
+                    break;
+                case BUTTON_3:
+                    buttons = shift_button_value(ev.event, buttons, button_3_bit);
+                    break;
+                case BUTTON_4:
+                    buttons = shift_button_value(ev.event, buttons, button_4_bit);
             }
-            if ((ev.pin == BUTTON_1) && (ev.event == BUTTON_UP)) {
-                ESP_LOGD(HID_JOYSTICK_TAG, "button up");
-                buttons = 0;
-            }
+
+            ESP_LOGI(HID_JOYSTICK_TAG, "buttons %d ", buttons);
         }
     }
 }
@@ -222,7 +252,7 @@ static uint8_t readJoystickChannel(adc1_channel_t channel)
 
 static void read_joystick_task(void *pvParameter)
 {
-    uint8_t x,y;
+    uint8_t js1x,js1y,js2x,js2y;
     uint32_t current_sum;
 
     while(1) {
@@ -230,22 +260,24 @@ static void read_joystick_task(void *pvParameter)
         // currently configured for updates being published at 20hz
         vTaskDelay(50 / portTICK_PERIOD_MS);
 
-        x = readJoystickChannel(ADC1_CHANNEL_6);
-        y = readJoystickChannel(ADC1_CHANNEL_4);
+        js1x = readJoystickChannel(ADC1_CHANNEL_6);
+        js1y = readJoystickChannel(ADC1_CHANNEL_4);
+        js2x = readJoystickChannel(ADC1_CHANNEL_3);
+        js2y = readJoystickChannel(ADC1_CHANNEL_0);
 
         // very simple checksum :)
-        current_sum = (buttons<<16) + (x<<8) + y;
+        current_sum = (js2x<<24) + (js2y<<16) + (js1x<<8) + js1y;
 
         ESP_LOGD(HID_JOYSTICK_TAG, "last_sum %d", last_sum);
 
         // only transmit if something changed
-        if (current_sum != last_sum) {
-            ESP_LOGD(HID_JOYSTICK_TAG, "send buttons %d X %d Y %d", buttons, x, y);
-            esp_hidd_send_joystick_value(hid_conn_id, buttons, x, y);
+        if (current_sum != last_sum || last_buttons != buttons) {
+            ESP_LOGD(HID_JOYSTICK_TAG, "send buttons %d JS1 X=%d Y=%d JS2 X=%d Y=%d", buttons, js1x, js1y, js2x, js2y);
+            esp_hidd_send_joystick_value(hid_conn_id, buttons, js1x, js1y, js2x, js2y);
         }
 
         last_sum = current_sum;
-
+        last_buttons = buttons;
     }
 
 }
