@@ -35,6 +35,29 @@ Handy gamepad tester used is located at http://luser.github.io/gamepadtest/
 
 TODO Circuit diagram.
 
+J1 connector.
+
+P6 3v3
+P5 Sw01     GPIO_14
+P4 Sw02     GPIO_25
+P3 Sw03     GPIO_26
+P2 Sw04     GPIO_27
+P1 GND
+
+J2 connector
+
+P1 Sw10     GPIO_19
+P2 Sw09     GPIO_18
+P3 Sw08     GPIO_17
+P4 Sw07     GPIO_16
+P5 Sw06     GPIO_05
+P6 Sw05     GPIO_04
+
+LEFT_X GPIO_32
+LEFT_Y GPIO_33
+RIGHT_X GPIO_34
+RIGHT_Y GPIO_35
+
 # TODO
 
 * [ ] Make a simple case and wire up a 1S battery
