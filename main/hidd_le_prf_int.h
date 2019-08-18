@@ -153,7 +153,7 @@ enum {
     HIDD_LE_IDX_REPORT_CC_IN_VAL,
     HIDD_LE_IDX_REPORT_CC_IN_CCC,
     HIDD_LE_IDX_REPORT_CC_IN_REP_REF,
-    
+
     // Boot Keyboard Input Report
     HIDD_LE_IDX_BOOT_KB_IN_REPORT_CHAR,
     HIDD_LE_IDX_BOOT_KB_IN_REPORT_VAL,
@@ -297,7 +297,7 @@ typedef struct
     uint8_t report_id;
     ///Report Type
     uint8_t report_type;
-}hids_report_ref_t;
+} hids_report_ref_t;
 
 /// HID Information structure
 typedef struct
@@ -308,7 +308,7 @@ typedef struct
     uint8_t bCountryCode;
     /// Flags
     uint8_t flags;
-}hids_hid_info_t;
+} hids_hid_info_t;
 
 
 /* service engine control block */
