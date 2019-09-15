@@ -107,6 +107,16 @@ QueueHandle_t * button_init(unsigned long long pin_select) {
     // Configure the pins
     gpio_config_t io_conf;
     io_conf.mode = GPIO_MODE_INPUT;
+    
+    //disable interupts
+    io_conf.intr_type = GPIO_PIN_INTR_DISABLE;
+    //disable pull-down mode
+    io_conf.pull_down_en = 0;
+    //disable pull-up mode
+    io_conf.pull_up_en = 0;
+    //enable pull-up mode
+    io_conf.pull_up_en = 1;
+    
     io_conf.pin_bit_mask = pin_select;
     gpio_config(&io_conf);
 

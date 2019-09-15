@@ -35,8 +35,9 @@
 #include "driver/gpio.h"
 #include "hid_dev.h"
 
-#include "button.h"
 #include "driver/adc.h"
+
+#include "joystick_buttons.h"
 
 #define HID_JOYSTICK_TAG "HID_JOYSTICK"
 
@@ -44,9 +45,6 @@ static uint16_t hid_conn_id = 0;
 static bool sec_conn = false;
 
 static bool connected = false;
-static uint8_t buttons = 0;
-static uint32_t last_sum = 0;
-static uint8_t last_buttons = 0;
 
 #define CHAR_DECLARATION_SIZE   (sizeof(uint8_t))
 
@@ -89,38 +87,38 @@ static esp_ble_adv_params_t hidd_adv_params = {
 static void hidd_event_callback(esp_hidd_cb_event_t event, esp_hidd_cb_param_t *param)
 {
     switch(event) {
-        case ESP_HIDD_EVENT_REG_FINISH: {
-            if (param->init_finish.state == ESP_HIDD_INIT_OK) {
-                //esp_bd_addr_t rand_addr = {0x04,0x11,0x11,0x11,0x11,0x05};
-                esp_ble_gap_set_device_name(HIDD_DEVICE_NAME);
-                esp_ble_gap_config_adv_data(&hidd_adv_data);
-            }
-            break;
+    case ESP_HIDD_EVENT_REG_FINISH: {
+        if (param->init_finish.state == ESP_HIDD_INIT_OK) {
+            //esp_bd_addr_t rand_addr = {0x04,0x11,0x11,0x11,0x11,0x05};
+            esp_ble_gap_set_device_name(HIDD_DEVICE_NAME);
+            esp_ble_gap_config_adv_data(&hidd_adv_data);
         }
-        case ESP_BAT_EVENT_REG: {
-            break;
-        }
-        case ESP_HIDD_EVENT_DEINIT_FINISH:
-            break;
-		case ESP_HIDD_EVENT_BLE_CONNECT: {
-            ESP_LOGI(HID_JOYSTICK_TAG, "ESP_HIDD_EVENT_BLE_CONNECT");
-            connected = true;
-            hid_conn_id = param->connect.conn_id;
-            break;
-        }
-        case ESP_HIDD_EVENT_BLE_DISCONNECT: {
-            sec_conn = false;
-            connected = false;
-            ESP_LOGI(HID_JOYSTICK_TAG, "ESP_HIDD_EVENT_BLE_DISCONNECT");
-            esp_ble_gap_start_advertising(&hidd_adv_params);
-            break;
-        }
-        case ESP_HIDD_EVENT_BLE_VENDOR_REPORT_WRITE_EVT: {
-            ESP_LOGI(HID_JOYSTICK_TAG, "%s, ESP_HIDD_EVENT_BLE_VENDOR_REPORT_WRITE_EVT", __func__);
-            ESP_LOG_BUFFER_HEX(HID_JOYSTICK_TAG, param->vendor_write.data, param->vendor_write.length);
-        }    
-        default:
-            break;
+        break;
+    }
+    case ESP_BAT_EVENT_REG: {
+        break;
+    }
+    case ESP_HIDD_EVENT_DEINIT_FINISH:
+        break;
+    case ESP_HIDD_EVENT_BLE_CONNECT: {
+        ESP_LOGI(HID_JOYSTICK_TAG, "ESP_HIDD_EVENT_BLE_CONNECT");
+        connected = true;
+        hid_conn_id = param->connect.conn_id;
+        break;
+    }
+    case ESP_HIDD_EVENT_BLE_DISCONNECT: {
+        sec_conn = false;
+        connected = false;
+        ESP_LOGI(HID_JOYSTICK_TAG, "ESP_HIDD_EVENT_BLE_DISCONNECT");
+        esp_ble_gap_start_advertising(&hidd_adv_params);
+        break;
+    }
+    case ESP_HIDD_EVENT_BLE_VENDOR_REPORT_WRITE_EVT: {
+        ESP_LOGI(HID_JOYSTICK_TAG, "%s, ESP_HIDD_EVENT_BLE_VENDOR_REPORT_WRITE_EVT", __func__);
+        ESP_LOG_BUFFER_HEX(HID_JOYSTICK_TAG, param->vendor_write.data, param->vendor_write.length);
+    }
+    default:
+        break;
     }
     return;
 }
@@ -136,14 +134,14 @@ static void gap_event_handler(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param
             ESP_LOGD(HID_JOYSTICK_TAG, "%x:",param->ble_security.ble_req.bd_addr[i]);
         }
         esp_ble_gap_security_rsp(param->ble_security.ble_req.bd_addr, true);
-	break;
+        break;
     case ESP_GAP_BLE_AUTH_CMPL_EVT:
         sec_conn = true;
         esp_bd_addr_t bd_addr;
         memcpy(bd_addr, param->ble_security.auth_cmpl.bd_addr, sizeof(esp_bd_addr_t));
         ESP_LOGI(HID_JOYSTICK_TAG, "remote BD_ADDR: %08x%04x",\
-                (bd_addr[0] << 24) + (bd_addr[1] << 16) + (bd_addr[2] << 8) + bd_addr[3],
-                (bd_addr[4] << 8) + bd_addr[5]);
+                 (bd_addr[0] << 24) + (bd_addr[1] << 16) + (bd_addr[2] << 8) + bd_addr[3],
+                 (bd_addr[4] << 8) + bd_addr[5]);
         ESP_LOGI(HID_JOYSTICK_TAG, "address type = %d", param->ble_security.auth_cmpl.addr_type);
         ESP_LOGI(HID_JOYSTICK_TAG, "pair status = %s",param->ble_security.auth_cmpl.success ? "success" : "fail");
         if(!param->ble_security.auth_cmpl.success) {
@@ -153,94 +151,6 @@ static void gap_event_handler(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param
     default:
         break;
     }
-}
-
-#define BUTTON_1 4
-#define BUTTON_2 12
-#define BUTTON_3 18
-#define BUTTON_4 19
-
-const uint8_t button_1_bit = 1 << 0;
-const uint8_t button_2_bit = 1 << 1;
-const uint8_t button_3_bit = 1 << 2;
-const uint8_t button_4_bit = 1 << 3;
-
-static uint8_t shift_button_value(uint8_t event, uint8_t cbuttons, uint8_t val) {
-    if (event == BUTTON_UP) {
-        cbuttons &= ~(val);
-    }
-    if (event == BUTTON_DOWN) {
-        cbuttons |= (val);
-    }
-
-    return cbuttons;
-}
-
-static void joystick_button_task(void *pvParameter)
-{
-    button_event_t ev;
-    QueueHandle_t button_events = button_init(PIN_BIT(BUTTON_1) | PIN_BIT(BUTTON_2) | PIN_BIT(BUTTON_3) | PIN_BIT(BUTTON_4));
-    uint8_t val = 0;
-
-    while (true) {
-        if (xQueueReceive(button_events, &ev, 1000/portTICK_PERIOD_MS)) {
-            ESP_LOGI(HID_JOYSTICK_TAG, "button pin: %d event: %d", ev.pin, ev.event);
-
-            switch(ev.pin) {
-                case BUTTON_1:
-                    buttons = shift_button_value(ev.event, buttons, button_1_bit);
-                    break;
-                case BUTTON_2:
-                    buttons = shift_button_value(ev.event, buttons, button_2_bit);
-                    break;
-                case BUTTON_3:
-                    buttons = shift_button_value(ev.event, buttons, button_3_bit);
-                    break;
-                case BUTTON_4:
-                    buttons = shift_button_value(ev.event, buttons, button_4_bit);
-            }
-
-            ESP_LOGI(HID_JOYSTICK_TAG, "buttons %d ", buttons);
-        }
-    }
-}
-
-#define BLINK_GPIO 5
-
-static void blink_led_task(void *pvParameter)
-{
-    while(1) {
-
-        if (connected) {
-            /* Blink off (output low) */
-            gpio_set_level(BLINK_GPIO, 0);
-            vTaskDelay(1000 / portTICK_PERIOD_MS);
-
-        }
-        /* Blink on (output high) */
-        gpio_set_level(BLINK_GPIO, 1);
-        vTaskDelay(1000 / portTICK_PERIOD_MS);
-    }
-
-}
-
-static esp_err_t blink_led_init(void) 
-{
-    gpio_pad_select_gpio(BLINK_GPIO);
-    /* Set the GPIO as a push/pull output */
-    gpio_set_direction(BLINK_GPIO, GPIO_MODE_OUTPUT);
-
-    xTaskCreate(blink_led_task, "blink_led_task", 2048, NULL, 4, NULL);
-
-    return ESP_OK;
-}
-
-static esp_err_t joystick_button_init(void) 
-{
-
-    xTaskCreate(joystick_button_task, "button_task", 2048, NULL, 4, NULL);
-
-    return ESP_OK;
 }
 
 static uint8_t readJoystickChannel(adc1_channel_t channel)
@@ -255,15 +165,25 @@ static void read_joystick_task(void *pvParameter)
     uint8_t js1x,js1y,js2x,js2y;
     uint32_t current_sum;
 
-    while(1) {
+    uint16_t buttons = 0;
+    uint32_t last_sum = 0;
+    uint16_t last_buttons = 0;
 
-        // currently configured for updates being published at 20hz
-        vTaskDelay(50 / portTICK_PERIOD_MS);
+    joystick_buttons_event_t ev;
+    QueueHandle_t joystick_buttons_events = joystick_buttons_init();
 
-        js1x = readJoystickChannel(ADC1_CHANNEL_6);
+    while(true) {
+        ESP_LOGD(HID_JOYSTICK_TAG, "wait for joystick_buttons_events");
+
+        if (xQueueReceive(joystick_buttons_events, &ev, 50/portTICK_PERIOD_MS)) {
+            ESP_LOGI(HID_JOYSTICK_TAG, "joystick_buttons_events %d", ev.state);
+            buttons = ev.state;
+        }
+
+        js1x = readJoystickChannel(ADC1_CHANNEL_5);
         js1y = readJoystickChannel(ADC1_CHANNEL_4);
-        js2x = readJoystickChannel(ADC1_CHANNEL_3);
-        js2y = readJoystickChannel(ADC1_CHANNEL_0);
+        js2x = readJoystickChannel(ADC1_CHANNEL_7);
+        js2y = readJoystickChannel(ADC1_CHANNEL_6);
 
         // very simple checksum :)
         current_sum = (js2x<<24) + (js2y<<16) + (js1x<<8) + js1y;
@@ -276,13 +196,14 @@ static void read_joystick_task(void *pvParameter)
             esp_hidd_send_joystick_value(hid_conn_id, buttons, js1x, js1y, js2x, js2y);
         }
 
+        // used to detect state changes which trigger sending a packet
         last_sum = current_sum;
         last_buttons = buttons;
     }
 
 }
 
-static esp_err_t read_joystick_init(void) 
+static esp_err_t read_joystick_init(void)
 {
 
     xTaskCreate(read_joystick_task, "read_joystick_task", 2048, NULL, 4, NULL);
@@ -348,20 +269,13 @@ void app_main()
     esp_ble_gap_set_security_param(ESP_BLE_SM_MAX_KEY_SIZE, &key_size, sizeof(uint8_t));
     /* If your BLE device act as a Slave, the init_key means you hope which types of key of the master should distribute to you,
     and the response key means which key you can distribute to the Master;
-    If your BLE device act as a master, the response key means you hope which types of key of the slave should distribute to you, 
+    If your BLE device act as a master, the response key means you hope which types of key of the slave should distribute to you,
     and the init key means which key you can distribute to the slave. */
     esp_ble_gap_set_security_param(ESP_BLE_SM_SET_INIT_KEY, &init_key, sizeof(uint8_t));
     esp_ble_gap_set_security_param(ESP_BLE_SM_SET_RSP_KEY, &rsp_key, sizeof(uint8_t));
 
-    if((ret = joystick_button_init()) != ESP_OK) {
-        ESP_LOGE(HID_JOYSTICK_TAG, "%s init joystick button failed\n", __func__);
-    }
-    
     if((ret = read_joystick_init()) != ESP_OK) {
         ESP_LOGE(HID_JOYSTICK_TAG, "%s init read joystick failed\n", __func__);
-    }
-    if((ret = blink_led_init()) != ESP_OK) {
-        ESP_LOGE(HID_JOYSTICK_TAG, "%s init blink failed\n", __func__);
     }
 }
 

@@ -11,6 +11,11 @@
         "esp_gatt_defs.h": "c",
         "gatt_api.h": "c",
         "esp_bt.h": "c",
-        "adc.h": "c"
+        "adc.h": "c",
+        "esp_system.h": "c",
+        "joystick_buttons.h": "c",
+        "esp_log.h": "c",
+        "gpio.h": "c",
+        "esp_err.h": "c"
     },
 }
