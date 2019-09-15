@@ -180,10 +180,10 @@ static void read_joystick_task(void *pvParameter)
             buttons = ev.state;
         }
 
-        js1x = readJoystickChannel(ADC1_CHANNEL_4);
-        js1y = readJoystickChannel(ADC1_CHANNEL_5);
-        js2x = readJoystickChannel(ADC1_CHANNEL_6);
-        js2y = readJoystickChannel(ADC1_CHANNEL_7);
+        js1x = readJoystickChannel(ADC1_CHANNEL_5);
+        js1y = readJoystickChannel(ADC1_CHANNEL_4);
+        js2x = readJoystickChannel(ADC1_CHANNEL_7);
+        js2y = readJoystickChannel(ADC1_CHANNEL_6);
 
         // very simple checksum :)
         current_sum = (js2x<<24) + (js2y<<16) + (js1x<<8) + js1y;
