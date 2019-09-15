@@ -150,11 +150,11 @@ void esp_hidd_send_joystick_value(uint16_t conn_id, uint16_t joystick_buttons, u
     ESP_LOGD(HID_LE_PRF_TAG, "the buttons value = %d js1 = %d, %d js2 = %d, %d", joystick_buttons, joystick_x, joystick_y, joystick_z, joystick_rx);
 
     buffer[0]=joystick_buttons & 0xff;
-    buffer[1]=(joystick_buttons >> 8);
+    buffer[1] = ( joystick_buttons >> 8);
     buffer[2] = ( joystick_x ^ 0x80 );    // X
-    buffer[3] = ( joystick_y ^ 0x80 );    // Y
+    buffer[3] = (( joystick_y ^ 0x80 ) * -1) - 1;    // Y
     buffer[4] = ( joystick_z ^ 0x80 );    // X
-    buffer[5] = ( joystick_rx ^ 0x80 );    // Y
+    buffer[5] = (( joystick_rx ^ 0x80 ) * -1) - 1;   // Y
 
     hid_dev_send_report(hidd_le_env.gatt_if, conn_id,
                         HID_RPT_ID_MOUSE_IN, HID_REPORT_TYPE_INPUT, HID_GAMEPAD_IN_RPT_LEN, buffer);
